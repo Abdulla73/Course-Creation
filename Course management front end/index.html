@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Course</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+  <div class="sidebar">
+    <!-- Sidebar content (optional) -->
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="material-icons">account_circle</span>
+      <span class="material-icons">dark_mode</span>
+    </div>
+
+    <h2 class="page-title">Create a Course</h2>
+
+    <div id="course-form">
+      <div class="form-group">
+        <input type="text" id="course-title" class="input-field" placeholder="Course Title" />
+        <input type="text" id="feature-video" class="input-field" placeholder="Feature Video" />
+      </div>
+
+      <button id="add-module" class="btn blue">+ Add Module</button>
+      <div id="modules"></div>
+
+      <div class="form-actions">
+        <button id="save-course" class="btn green">Save</button>
+        <button class="btn red">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    let moduleCount = 0;
+
+    $('#add-module').click(() => {
+      const moduleId = `module-${moduleCount++}`;
+      $('#modules').append(`
+        <div class="module" data-id="${moduleId}">
+          <div class="module-content">
+            <input type="text" class="module-title input-field" placeholder="Module Title"/>
+            <button class="btn red remove-module">× Remove Module</button>
+          </div>
+          <button class="btn blue add-content">+ Add Content</button>
+          <div class="contents"></div>
+        </div>
+      `);
+    });
+
+    $(document).on('click', '.remove-module', function () {
+      $(this).closest('.module').remove();
+    });
+
+    $(document).on('click', '.add-content', function () {
+      const container = $(this).siblings('.contents');
+      container.append(`
+        <div class="content">
+          <input type="text" class="content-title input-field" placeholder="Content Title"/>
+          <input type="text" class="video-type input-field" placeholder="Video Source Type"/>
+          <input type="text" class="video-url input-field" placeholder="Video URL"/>
+          <input type="text" class="video-length input-field" placeholder="HH:MM:SS"/>
+          <button class="btn red remove-content">x Remove Content</button>
+        </div>
+      `);
+    });
+
+    $(document).on('click', '.remove-content', function () {
+      $(this).closest('.content').remove();
+    });
+
+    $('#save-course').click(() => {
+      const courseTitle = $('#course-title').val().trim();
+      if (!courseTitle) return alert('Course title is required.');
+
+      const modules = [];
+      let hasError = false;
+
+      $('.module').each(function () {
+        const moduleTitle = $(this).find('.module-title').val().trim();
+        if (!moduleTitle) {
+          alert('Each module needs a title.');
+          hasError = true;
+          return false;
+        }
+
+        const contents = [];
+        $(this).find('.content').each(function () {
+          const contentTitle = $(this).find('.content-title').val().trim();
+          if (!contentTitle) {
+            alert('Each content needs a title.');
+            hasError = true;
+            return false;
+          }
+
+          contents.push({
+            title: contentTitle,
+            video_source_type: $(this).find('.video-type').val().trim(),
+            video_url: $(this).find('.video-url').val().trim(),
+            video_length: $(this).find('.video-length').val().trim()
+          });
+        });
+
+        if (hasError) return false;
+
+        modules.push({ title: moduleTitle, contents });
+      });
+
+      if (hasError) return;
+
+      const course = {
+        title: courseTitle,
+        feature_video: $('#feature-video').val().trim(),
+        modules: modules
+      };
+
+      $.ajax({
+        url: 'http://127.0.0.1:8000/api/courses',
+        type: 'POST',
+        data: JSON.stringify(course),
+        contentType: 'application/json',
+        success: function (res) {
+          alert('Course saved!\n\nResponse: ' + JSON.stringify(res));
+        },
+        error: function (xhr, status, error) {
+          let errorMsg = 'Failed to save course.\n\nStatus: ' + status + '\nError: ' + error;
+          try {
+            const responseJSON = JSON.parse(xhr.responseText);
+            errorMsg += '\nMessage: ' + (responseJSON.message || JSON.stringify(responseJSON));
+          } catch (e) {
+            errorMsg += '\nRaw response: ' + xhr.responseText;
+          }
+          alert(errorMsg);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
